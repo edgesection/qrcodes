@@ -9,6 +9,9 @@ import calendar
 from datetime import datetime
 from urllib.parse import urlparse
 from tkinter import font
+import requests
+import json
+import os
 
 utc = time.gmtime()
 
@@ -23,7 +26,7 @@ connection.commit()
 def createQR(*args):
     data = text_entry.get().lower()
     data = urlparse(data)
-    data = data.netloc+data.path+"?"+data.query
+    data = data.netloc+data.path+""+data.query
     
     result=re.match("^((ftp|http|https):\/\/)?(www\.)?([A-Za-zА-Яа-я0-9]{1}[A-Za-zА-Яа-я0-9\-]*\.?)*\.{1}[A-Za-zА-Яа-я0-9-]{2,8}(\/([\w#!:.?+=&%@!\-\/])*)?", data) is not None
     if not result:
@@ -53,12 +56,16 @@ def createQR(*args):
                 
             c.execute('INSERT INTO views (id_link, time) VALUES (?,?)', (id_activity, int(time.time())))
             connection.commit()
+            
+            payload = {"url": data}
+            r = requests.post("https://edgesection.ru/module/test/qrcodes_stats.php", data=payload)
+            #print(r.text)
                 
-            img = qrcode.make(data) #generate QRcode  
-            res_img = img.resize((300,300)) # reszie QR Code Size
+            img = qrcode.make("https://edgesection.ru/module/test/qrcodes_stats.php?url="+data+"&act=redirect") #generate QRcode  
+            res_img = img.resize((280,280)) # reszie QR Code Size
             #Convert To photoimage
             tkimage= ImageTk.PhotoImage(res_img)
-            qr_canvas.create_image(0,0,anchor=tk.NW, image=tkimage)
+            qr_canvas.create_image(10,0,anchor=tk.NW, image=tkimage)
             qr_canvas.image = tkimage
                 
         else:
@@ -79,7 +86,7 @@ def saveQR():
     
 def top():
 
-    c.execute('SELECT L.link as link,  COUNT(*) as views, MAX(V.time) as last_time, L.time as time FROM views V RIGHT OUTER JOIN links L ON L.id = V.id_link GROUP BY V.id_link ORDER BY views DESC LIMIT 10')
+    c.execute('SELECT L.link as link,  COUNT(*) as views, MAX(V.time) as last_time, L.time as time FROM views V LEFT OUTER JOIN links L ON L.id = V.id_link GROUP BY V.id_link ORDER BY views DESC LIMIT 10')
     links = c.fetchall()
     
     if len(links) <= 0:
@@ -136,6 +143,8 @@ def top():
     for site in sites:
         tree.insert("", tk.END, values=site)
     
+def link():
+    os.system("start https://edgesection.ru/module/test/qrcodes_stats.php") #Тут вставьте ссылку которая вам нужна
     
 def exit():
     connection.close()
@@ -144,7 +153,7 @@ def exit():
 
 root = tk.Tk()
 root.title("QR Code генератор")
-root.geometry("350x430")
+root.geometry("350x460")
 root.config(bg='white')
 root.resizable(0,0)
 icon = PhotoImage(file = "icon.png")
@@ -181,6 +190,9 @@ btn_3.place(x=215,y=50)
 
 btn_4 = ttk.Button(root,text="Топ сайтов",width=53,command=top)
 btn_4.place(x=10,y=390)
+
+btn_5 = ttk.Button(root,text="Глобальная статистика",width=53,command=link)
+btn_5.place(x=10,y=420)
 
 
 root.mainloop()
