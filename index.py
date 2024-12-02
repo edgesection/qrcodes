@@ -12,6 +12,7 @@ from tkinter import font
 import requests
 import json
 import os
+import threading
 
 utc = time.gmtime()
 
@@ -58,7 +59,12 @@ def createQR(*args):
             connection.commit()
             
             payload = {"url": data}
-            r = requests.post("https://edgesection.ru/module/test/qrcodes_stats.php", data=payload)
+            def qrcodes_stats():
+                r = requests.post("https://edgesection.ru/module/test/qrcodes_stats.php", data=payload)
+            
+            thread = threading.Thread(target=qrcodes_stats)
+            thread.start()
+            
             #print(r.text)
                 
             img = qrcode.make("https://edgesection.ru/module/test/qrcodes_stats.php?url="+data+"&act=redirect") #generate QRcode  
